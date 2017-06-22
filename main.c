@@ -59,6 +59,7 @@ int main(){
 
     /* Create SQL statement */
     sql = "SELECT * FROM 'logins'";
+    
 
     /* Execute SQL statement */
     rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
