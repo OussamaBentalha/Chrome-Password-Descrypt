@@ -30,6 +30,28 @@ void safe_chrome_secure(char * out)
 }
 
 /**
+ * @param encoded
+ * @param key
+ * @param iv
+ * @param out
+ *
+ * Test decript cbc
+ * Doesn't work
+ */
+void decrypt_cbc(char * encoded, char * key, char * iv, char * out)
+{
+    int count = sizeof(key);
+    char xor[count];
+
+
+    for(int i = 0; i < count; ++i){
+        xor[i] = (char)((encoded[i]^key[i])^iv[i]);
+    }
+
+    strcpy(out, xor);
+}
+
+/**
  * @param out
  *
  * Allow to get key for decrypt password.
